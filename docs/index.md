@@ -6,14 +6,7 @@
     2025.1
 
 
-## Grupo/Kit X
-
-1. João da Silva
-1. Pedro de Souza
-1. Maria Oliveira
-1. Grupo K
-    - João da Silva
-    - Pedro de Souza
+## Eric Possato
 
 
 

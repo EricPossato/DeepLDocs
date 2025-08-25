@@ -1,8 +1,8 @@
 site_name: Template de Entrega
 site_author: Sandmann, H.
-site_url: https://hsandmann.github.io/documentation.template
-repo_url: https://github.com/hsandmann/documentation.template
-repo_name: github/documentation.template
+site_url: https://EricPossato.github.io/DeepLDocs
+repo_url: https://github.com/EricPossato/DeepLDocs
+repo_name: github/DeepLDocs
 
 theme:
   name: material
@@ -134,9 +134,6 @@ extra_javascript:
 nav:
   - Home: index.md
   - This documentation: ./thisdocumentation/main.md
-  - Roteiros:
-    - Roteiro 1: ./roteiro1/main.md
-    - Roteiro 2: ./roteiro2/main.md
-    - Roteiro 3: ./roteiro3/main.md
-    - Roteiro 4: ./roteiro4/main.md
+  - Exercises:
+    - Exercise 1: ./exercise1/main.md
   - Projeto: ./projeto/main.md
