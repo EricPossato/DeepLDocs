@@ -30,10 +30,87 @@ Understanding how data is distributed is the first step before designing a netwo
     * **Class 2:** Mean = $[8, 1]$, Standard Deviation = $[0.9, 0.9]$
     * **Class 3:** Mean = $[15, 4]$, Standard Deviation = $[0.5, 2.0]$
 1.  **Plot the Data:** Create a 2D scatter plot showing all the data points. Use a different color for each class to make them distinguishable.
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# Number of samples per class
+n_samples = 100  
+
+# Class parameters: (mean, std)
+class_params = {
+    0: {"mean": [2, 3], "std": [0.8, 2.5]},
+    1: {"mean": [5, 6], "std": [1.2, 1.9]},
+    2: {"mean": [8, 1], "std": [0.9, 0.9]},
+    3: {"mean": [15, 4], "std": [0.5, 2.0]}
+}
+
+# Store all samples
+data = []
+labels = []
+
+for label, params in class_params.items():
+    mean = params["mean"]
+    std = params["std"]
+    
+    # Generate Gaussian distributed samples
+    x = np.random.normal(mean[0], std[0], n_samples)
+    y = np.random.normal(mean[1], std[1], n_samples)
+    
+    # Stack into dataset
+    samples = np.column_stack((x, y))
+    data.append(samples)
+    labels.extend([label] * n_samples)
+
+# Combine into full dataset
+data = np.vstack(data)
+labels = np.array(labels)
+
+# Put into a DataFrame
+df = pd.DataFrame(data, columns=["x1", "x2"])
+df["class"] = labels
+
+# Visualization
+plt.figure(figsize=(8,6))
+for label in class_params.keys():
+    subset = df[df["class"] == label]
+    plt.scatter(subset["x1"], subset["x2"], label=f"Class {label}", alpha=0.6)
+
+plt.legend()
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.title("Synthetic Gaussian Dataset (4 classes)")
+# Save image
+plt.savefig("synthetic_gaussian_dataset.png")
+```
+
+    ![Synthetic Gaussian Dataset](synthetic_gaussian_dataset.png)
+
 1.  **Analyze and Draw Boundaries:**
     1. Examine the scatter plot carefully. Describe the distribution and overlap of the four classes.
+        - Class 0 has a spread across most of the vertical axis and and is between 0.0 and 4.0 horizontally. Slightly overlaps Class 1
+
+        - Class 0 has a diagonal spread, between 2 and 10 vertically as well as horizontally. Slightly overlaps Class 0 in a few points and Class 2 in fewer points.
+
+        - Class 2 is very concentrated and relatvely isolated from other classes.
+
+        - Class 3 is completely isolated, spread vertically along and the furthest in the x axis.
+
     1. Based on your visual inspection, could a simple, linear boundary separate all classes?
+        - A linear boundary is capable of mostly separating all classes (with some missclassified points), but because of the overlaps between class 0 and 1, a perfect and clean linear separation would fail.
     1. On your plot, sketch the decision boundaries that you think a trained neural network might learn to separate these classes.
+
+        - By adding the following code to the earlier plot, we can approximate some separations between classes
+        ```python
+        # three hand-drawn separators 
+        plt.plot([6.0, 0.6], [-2.0, 10.0], linestyle="--", linewidth=2, color="k", label="approx. boundary")  # between 0 & 1
+        plt.plot([4.0, 12.0], [2.0, 5.0], linestyle="--", linewidth=2, color="k")                            # between 1 & 2
+        plt.plot([12.0, 12.0], [-1, 9], linestyle="--", linewidth=2, color="k")                             # isolate class 3
+        ```
+        ![Synthetic Gaussian Dataset with Boundaries](synthetic_gaussian_dataset_with_boundaries.png)
 
 ***
 
