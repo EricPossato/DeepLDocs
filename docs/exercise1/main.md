@@ -254,8 +254,59 @@ This exercise uses a real dataset from Kaggle. Your task is to perform the neces
 1.  **Get the Data:** Download the [**Spaceship Titanic**](https://www.kaggle.com/competitions/spaceship-titanic){:target="_blank"} dataset from Kaggle.
 2.  **Describe the Data:**
     * Briefly describe the dataset's objective (i.e., what does the `Transported` column represent?).
+        - The dataset comes from the Kaggle competition: Spaceship Titanic. The dataset consists of records recovered from the spaceship's damaged computer system after the ship collided with an anomaly. The objective of the competition and consequently, the data, is to be able to predict which passengers were transported to an alternate dimension by the anomaly
     * List the features and identify which are **numerical** (e.g., `Age`, `RoomService`) and which are **categorical** (e.g., `HomePlanet`, `Destination`).
+    ```python
+    import pandas as pd
+
+    # Load dataset (adjust path to your train.csv)
+    df = pd.read_csv("./docs/exercise1/titanic_dataset/train.csv")
+
+
+    # List all columns
+    print("\nColumns in dataset:")
+    print(df.columns.tolist())
+
+    # Show data types and non-null counts
+    print("\nInfo about dataset:")
+    print(df.info())
+
+
+    # Quick separation into numerical vs categorical
+    numerical_cols = df.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=["object", "bool"]).columns.tolist()
+
+    print("\nNumerical features:", numerical_cols)
+    print("Categorical features:", categorical_cols)
+    ```
+    ```
+    Numerical features: ['Age', 'RoomService', 'FoodCourt', 'ShoppingMall', 'Spa', 'VRDeck']
+    Categorical features: ['PassengerId', 'HomePlanet', 'CryoSleep', 'Cabin', 'Destination', 'VIP', 'Name', 'Transported']
+    ```
     * Investigate the dataset for **missing values**. Which columns have them, and how many?
+    ```python
+    # Summary of missing values
+    print("\nMissing values per column:")
+    print(df.isna().sum())
+    ```
+    ```
+    Missing values per column:
+    PassengerId       0
+    HomePlanet      201
+    CryoSleep       217
+    Cabin           199
+    Destination     182
+    Age             179
+    VIP             203
+    RoomService     181
+    FoodCourt       183
+    ShoppingMall    208
+    Spa             183
+    VRDeck          188
+    Name            200
+    Transported       0
+    dtype: int64
+    ```
 3.  **Preprocess the Data:** Your goal is to clean and transform the data so it can be fed into a neural network. The `tanh` activation function produces outputs in the range `[-1, 1]`, so your input data should be scaled appropriately for stable training.
     * **Handle Missing Data:** Devise and implement a strategy to handle the missing values in all the affected columns. Justify your choices.
     * **Encode Categorical Features:** Convert categorical columns like `HomePlanet`, `CryoSleep`, and `Destination` into a numerical format. One-hot encoding is a good choice.
@@ -263,6 +314,89 @@ This exercise uses a real dataset from Kaggle. Your task is to perform the neces
 4.  **Visualize the Results:**
     * Create histograms for one or two numerical features (like `FoodCourt` or `Age`) **before** and **after** scaling to show the effect of your transformation.
 
+**Methods for 3 and 4:**
+
+- Numerical features (Age, RoomService, FoodCourt, ShoppingMall, Spa, VRDeck) were imputed with the median value of each column. Using median instead of mean makes it less likely that outliers influence the results.
+- Categorical features (HomePlanet, CryoSleep, Destination, VIP) were imputed with the mode (most frequent value). THis preserves the most common class for each feature
+- Dropped columns: Cabin and Name were removed. Name does not offer any useful information and Cabin is very complex, not usable without heavy feature engineering, so dropped for simplicity.
+- Binary variables (CryoSleep, VIP) were converted into 0/1 integers. This allows direct use as inputs in a neural network.
+- Nominal categorical variables (HomePlanet, Destination) were transformed using one-hot encoding. This removes ordinal bias by making each category a separate feature.
+- All numerical features were scaled to [-1, 1] using Min–Max normalization. The tanh activation function outputs values in the range [-1, 1] so this process scales the inputs to the required range.
+
+This is the code that combines all of the mentioned methos and generates histograms for the `Age` and `FoodCourt` columns:
+```Python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
+
+# Load dataset
+df = pd.read_csv("./docs/exercise1/titanic_dataset/train.csv")
+
+# Handle Missing Data
+
+# Numerical: fill with median
+num_cols = ["Age", "RoomService", "FoodCourt", "ShoppingMall", "Spa", "VRDeck"]
+for col in num_cols:
+    df[col] = df[col].fillna(df[col].median())
+
+# Categorical: fill with mode
+cat_cols = ["HomePlanet", "CryoSleep", "Destination", "VIP"]
+for col in cat_cols:
+    # make column string dtype
+    df[col] = df[col].astype("string")
+    # fill NaN with mode and convert to string dtype
+    df[col] = df[col].fillna(df[col].mode(dropna=True)[0]).astype(str)
+
+# Drop Cabin and Name
+df.drop(["Cabin", "Name"], axis=1, inplace=True)
+
+# Convert CryoSleep and VIP from True/False strings to 0/1 ints
+df["CryoSleep"] = df["CryoSleep"].map({"True": 1, "False": 0})
+df["VIP"] = df["VIP"].map({"True": 1, "False": 0})
+
+# Encode Categorical
+df["CryoSleep"] = df["CryoSleep"].astype(int)
+df["VIP"] = df["VIP"].astype(int)
+
+# One-hot encode categorical vars
+df = pd.get_dummies(df, columns=["HomePlanet", "Destination"], drop_first=True)
+
+# Capture copy BEFORE scaling
+pre_scale_num = df[num_cols].copy()
+
+# Scale Numerical Features
+scaler = MinMaxScaler(feature_range=(-1, 1))
+df[num_cols] = scaler.fit_transform(df[num_cols].astype("float64"))
+
+print(df.head())
+
+# histograms before vs after
+features_to_show = ["Age", "FoodCourt"]  # pick any subset of num_cols
+
+for col in features_to_show:
+    if col in pre_scale_num.columns:
+        fig, ax = plt.subplots(1, 2, figsize=(10, 4), sharex=False, sharey=False)
+        ax[0].hist(pre_scale_num[col].dropna(), bins=30)
+        ax[0].set_title(f"{col} — before scaling")
+        ax[0].set_xlabel(col); ax[0].set_ylabel("count")
+
+        ax[1].hist(df[col].dropna(), bins=30)
+        ax[1].set_title(f"{col} — after scaling (standardized)")
+        ax[1].set_xlabel(col); ax[1].set_ylabel("count")
+
+        plt.tight_layout()
+        # Save figures
+        plt.savefig(f"hist_{col.lower()}_before_after.png", dpi=150, bbox_inches="tight")
+        plt.show()
+
+```
+
+This are the histograms generated by this code:
+
+![Age before and after scalling](hist_age_before_after.png)
+![Food Court before and after scalling](hist_foodcourt_before_after.png)
 ***
 
 ## **Evaluation Criteria**
