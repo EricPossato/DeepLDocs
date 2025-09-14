@@ -136,4 +136,5 @@ nav:
   - This documentation: ./thisdocumentation/main.md
   - Exercises:
     - Exercise 1: ./exercise1/main.md
+    - Exercise 2: ./exercise2/main.md
   - Projeto: ./projeto/main.md
