@@ -221,6 +221,54 @@ Using the `make_classification` function from scikit-learn ([documentation](http
 - Number of clusters per class: Use the `n_clusters_per_class` parameter creatively to achieve 1 cluster for one class and 2 for the other (hint: you may need to generate subsets separately and combine them, as the function applies the same number of clusters to all classes by default).
 - Other parameters: Set `n_features=2` for easy visualization, `n_informative=2`, `n_redundant=0`, `random_state=42` for reproducibility, and adjust `class_sep` or `flip_y` as needed for a challenging but separable dataset.
 
+We can generate adequate data by using the following code (note that class 1 is usiung a random_state of 24 instead of 42 to avoid both clusters having too similar of a geometry):
+```Python
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_classification
+
+# Parameters you can experiment with
+n_samples = 500
+class_sep = 1.5
+flip_y = 0
+random_state_class0 = 42
+random_state_class1 = 24
+
+# Generate class 0 with 1 cluster
+X0, y0 = make_classification(
+    n_samples=n_samples, n_features=2, n_informative=2, n_redundant=0,
+    n_clusters_per_class=1, n_classes=2, weights=[1.0, 0.0],
+    class_sep=class_sep, flip_y=flip_y, random_state=random_state_class0
+)
+
+# Generate class 1 with 2 clusters
+X1, y1 = make_classification(
+    n_samples=n_samples, n_features=2, n_informative=2, n_redundant=0,
+    n_clusters_per_class=2, n_classes=2, weights=[0.0, 1.0],
+    class_sep=class_sep, flip_y=flip_y, random_state=random_state_class1
+)
+
+# Combine
+X = np.vstack((X0, X1))
+y = np.hstack((y0, y1))
+
+# Plot
+plt.figure(figsize=(6, 6))
+plt.scatter(X[y==0, 0], X[y==0, 1], c='blue', label='Class 0 (1 cluster)', alpha=0.6)
+plt.scatter(X[y==1, 0], X[y==1, 1], c='red', label='Class 1 (2 clusters)', alpha=0.6)
+plt.title("Synthetic Dataset: 1 cluster vs 2 clusters")
+plt.xlabel("Feature 1")
+plt.ylabel("Feature 2")
+plt.legend()
+plt.grid(True)
+#save image
+plt.savefig("docs/exercise3/dataset.png")
+#plt.show()
+```
+
+This is a plot of the data:
+![Exercise2 Dataset](ex2_dataset.png)
+
 Implement an MLP from scratch (without using libraries like TensorFlow or PyTorch for the model itself; you may use NumPy for array operations) to classify this data. You have full freedom to choose the architecture, including:
 
 - Number of hidden layers (at least 1)
@@ -237,7 +285,138 @@ Steps to follow:
 4. Evaluate on the test set: Report accuracy, and optionally plot decision boundaries or confusion matrix.
 5. Submit your code and results, including any visualizations.
 
+Before going into the code for each step, these are the auxiliary functions to account for the use of the sigmoid activation function, as well as binary cross-entropy loss function:
+```Python
+# Sigmoid activation
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
+# Derivative of sigmoid
+def sigmoid_derivative(x):
+    s = sigmoid(x)
+    return s * (1 - s)
+
+# Binary cross-entropy loss
+def binary_cross_entropy(y, y_hat):
+    eps = 1e-9
+    return -np.mean(y * np.log(y_hat + eps) + (1 - y) * np.log(1 - y_hat + eps))
+
+# Derivative of BCE wrt output pre-activation
+def bce_derivative(y, y_hat):
+    return (y_hat - y) / (y_hat * (1 - y_hat) + 1e-9)
+```
+
+Fist, we split the dataset between train and test:
+```Python
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+```
+
+Then, we set the parameters for the execution of the training:
+```Python
+# Network architecture
+input_dim = 2
+hidden_dim = 4
+output_dim = 1
+
+# Parameter initialization
+np.random.seed(1)
+W1 = np.random.randn(hidden_dim, input_dim) * 0.01
+b1 = np.zeros((hidden_dim, 1))
+W2 = np.random.randn(output_dim, hidden_dim) * 0.01
+b2 = np.zeros((output_dim, 1))
+
+# Training setup
+eta = 0.1
+epochs = 200
+train_losses = []
+```
+
+With the parameters set, we can setup a loop for each epoch performing the steps similar to exercise 1, but using the new activation and loss functions.
+We also append all losses so they can be plot later:
+```Python
+# Training loop
+for epoch in range(epochs):
+    # Forward Pass
+    Z1 = X_train.dot(W1.T) + b1.T
+    A1 = sigmoid(Z1)
+
+    Z2 = A1.dot(W2.T) + b2.T
+    A2 = sigmoid(Z2)
+
+    # Loss Calculation
+    loss = binary_cross_entropy(y_train, A2)
+    train_losses.append(loss)
+
+    # Backward Pass
+    dZ2 = bce_derivative(y_train, A2) * sigmoid_derivative(Z2)
+    dW2 = dZ2.T.dot(A1) / X_train.shape[0]
+    db2 = np.mean(dZ2, axis=0, keepdims=True)
+
+    dA1 = dZ2.dot(W2)
+    dZ1 = dA1 * sigmoid_derivative(Z1)
+    dW1 = dZ1.T.dot(X_train) / X_train.shape[0]
+    db1 = np.mean(dZ1, axis=0, keepdims=True)
+
+    # Parameter Update
+    W1 -= eta * dW1
+    b1 -= eta * db1.T
+    W2 -= eta * dW2
+    b2 -= eta * db2.T
+
+    if epoch % 20 == 0:
+        print(f"Epoch {epoch}, Loss: {loss:.4f}")
+
+```
+After training, we evaluate the model and calculate accuracy on the test set:
+```Python
+Z1 = X_test.dot(W1.T) + b1.T
+A1 = sigmoid(Z1)
+Z2 = A1.dot(W2.T) + b2.T
+A2 = sigmoid(Z2)
+
+y_pred = (A2 > 0.5).astype(int)
+accuracy = np.mean(y_pred == y_test)
+print(f"\nTest Accuracy: {accuracy:.4f}")
+```
+```text
+Test Accuracy: 0.9450
+```
+
+Finally, we can create corresponding visualization:
+```Python
+# Plot training loss
+plt.plot(train_losses)
+plt.title("Training Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.show()
+
+# Decision boundary visualization
+xx, yy = np.meshgrid(
+    np.linspace(X[:,0].min()-1, X[:,0].max()+1, 200),
+    np.linspace(X[:,1].min()-1, X[:,1].max()+1, 200)
+)
+grid = np.c_[xx.ravel(), yy.ravel()]
+
+Z1 = grid.dot(W1.T) + b1.T
+A1 = sigmoid(Z1)
+Z2 = A1.dot(W2.T) + b2.T
+A2 = sigmoid(Z2)
+preds = (A2 > 0.5).astype(int).reshape(xx.shape)
+
+plt.contourf(xx, yy, preds, alpha=0.3, cmap=plt.cm.Paired)
+plt.scatter(X_test[:,0], X_test[:,1], c=y_test.ravel(), edgecolor='k', cmap=plt.cm.Paired)
+plt.title("Decision Boundary (Test Set)")
+plt.show()
+```
+This is the graph generated by plotting the loss after every epoch of training:
+![Exercise2 Loss](ex2_training_loss.png)
+
+And this is the plot with the decision boundary created:
+![Exercise2 Decision Boundary](ex2_decision_boundary.png)
 ***
 
 ## Exercise 3: Multi-Class Classification with Synthetic Data and Reusable MLP
