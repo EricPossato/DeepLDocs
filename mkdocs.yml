@@ -110,7 +110,7 @@ plugins:
       enable_creation_date: true
   - git-authors
   - git-committers:
-      repository: EricPossato/DeepLDocs
+      repository: hsandmann/hsandmann.github.com
       branch: main
   - search
   - badges
