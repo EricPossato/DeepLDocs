@@ -1,1 +1,1 @@
-Link para github pages do projeto: https://p-asilva.github.io/neural-network-project/
+Link para github pages de projeto: <https://p-asilva.github.io/neural-network-project/>
