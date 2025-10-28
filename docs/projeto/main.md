@@ -1,1 +1,1 @@
-Aqui vai toda a documentação do projeto, incluindo o que já foi feito e o que falta fazer.
+Link para github pages do projeto: https://p-asilva.github.io/neural-network-project/
